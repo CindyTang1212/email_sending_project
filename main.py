@@ -45,7 +45,7 @@ def get_basic_info(date):
         if zhuangtai == 'COMPLETED':
             employee_num.append(int(gonghao))
             employee_name.append(df1[df1['全球员工工号'] == gonghao]['姓名'].item())
-            signed_company.append(df1[df1['全球员工工号'] == gonghao]['合同签约单位 '].item())
+            signed_company.append(df1[df1['全球员工工号'] == gonghao]['合同签约单位'].item())
             entry_date.append(df1[df1['全球员工工号'] == gonghao]['入职日期'].item())
             transfer_date.append(df1[df1['全球员工工号'] == gonghao]['试用期计划转正日期'].item())
             gangwei3.append(df1[df1['全球员工工号'] == gonghao]['岗位族3（专业）'].item())
@@ -103,10 +103,14 @@ def get_email_address(basic_info):
     for gangwei3 in basic_info['岗位族3']:
         if gangwei3 == '临床业务':
             city = basic_info['工作城市'][count]
+            print(city)
             regional_names.append(df3[df3['工作城市'] == city]['大区经理'].item())
             regional_email.append(df3[df3['工作城市'] == city]['大区经理邮箱'].item())
             city_mentor_names.append(df3[df3['工作城市'] == city]['带教组长'].item())
-            city_mentor_email.append(df3[df3['工作城市'] == city]['带教组长邮箱'].item())
+            if city != '上海':
+                city_mentor_email.append(df3[df3['工作城市'] == city]['带教组长邮箱'].item())
+            else:
+                city_mentor_email.append('')
         else:
             regional_names.append('')
             regional_email.append('')
@@ -118,7 +122,9 @@ def get_email_address(basic_info):
     emails['带教组长'] = city_mentor_names
     emails['带教组长邮箱'] = city_mentor_email
     emails = pd.DataFrame(emails)
+    print(emails['带教组长邮箱'])
     emails['抄送'] = emails['直属主管邮箱'] + ',' + emails['二级主管邮箱'] + ',' + emails['大区经理邮箱'] + ',' + emails['带教组长邮箱']
+    print(emails['抄送'])
     return emails
 
 
@@ -196,31 +202,31 @@ def insert_into_excel(df, excel_path):
     df_new.to_excel(excel_path, index=False)
 
 
-def deletefiles(path,keys,count=0):
+def deletefiles(path, keys, count=0):
     for file in os.listdir(path):
-        file_path = os.path.join(path,file)
-        print('正处理'+file_path)
+        file_path = os.path.join(path, file)
+        print('正处理' + file_path)
         if os.path.isdir(file_path):
             for key in keys:
                 if key in file:
                     try:
                         shutil.rmtree(file_path)
-                        print('已删除'+file_path)
+                        print('已删除' + file_path)
                         count += 1
                     except Exception as e:
-                        print('未删除'+file_path)
+                        print('未删除' + file_path)
                     continue
                 else:
-                    count = deletefiles(file_path, keys,count)
+                    count = deletefiles(file_path, keys, count)
         elif os.path.isfile(file_path):
             for key in keys:
                 if key in file:
                     try:
                         os.remove(file_path)
-                        print('已删除'+file_path)
+                        print('已删除' + file_path)
                         count += 1
                     except Exception as e:
-                        print('未删除'+file_path)
+                        print('未删除' + file_path)
                     continue
     return count
 
@@ -230,11 +236,11 @@ def format_date(date):
 
 
 if __name__ == '__main__':
-    today_date = '2022/6/8'
+    today_date = '2022/6/22'
     today_date_format = datetime.datetime.strptime(today_date, "%Y/%m/%d").strftime('%Y-%m-%d')
     sent_date = datetime.datetime.strptime(today_date, "%Y/%m/%d").strftime('%Y年%-m月%-d日')
-    df1 = pd.read_csv('source_data/试用期转正用脱敏花名册-0608.csv')
-    df2 = pd.read_csv('source_data/试用期转正报表包含流程中-0608.csv')
+    df1 = pd.read_csv('source_data/员工花名册-0622.csv')
+    df2 = pd.read_csv('source_data/试用期转正报表包含流程中-0622.csv')
     df3 = pd.read_csv('source_data/大区经理及带教组长邮箱.csv')
 
     basic_info = get_basic_info(today_date)
@@ -242,26 +248,25 @@ if __name__ == '__main__':
     df_basic_info['入职日期_发送版本'] = df_basic_info['入职日期'].apply(format_date)
     df_basic_info['计划转正日期_发送版本'] = df_basic_info['计划转正日期'].apply(format_date)
     result_path = 'result/' + today_date_format
-    if not os.path.exists(result_path):
-        os.mkdir(result_path)
-    basic_info_output_path = result_path + '/basic_info_' + today_date_format + '.xlsx'
-    df_basic_info.to_excel(basic_info_output_path,
-                           columns=['姓名', '入职日期_发送版本', '合同主体', '计划转正日期_发送版本', '工号'],
-                           index=False)
-    docx_template_path = 'source_data/发送模版.docx'
-    pics_output_path = result_path + '/pics'
-    if not os.path.exists(pics_output_path):
-        os.mkdir(pics_output_path)
-    email_merge(docx_template_path, basic_info_output_path, pics_output_path, sent_date)
-    docx_to_pdf(pics_output_path)
-    pdf_to_jpeg(pics_output_path)
-    folder_path = pics_output_path # 要处理的文件夹
-    keys = ['pdf', 'docx']  # 要删除的关键字列表
-    count = deletefiles(folder_path, keys)
-    print('共删除{}项'.format(count))
+    # if not os.path.exists(result_path):
+    #     os.mkdir(result_path)
+    # basic_info_output_path = result_path + '/basic_info_' + today_date_format + '.xlsx'
+    # df_basic_info.to_excel(basic_info_output_path,
+    #                        columns=['姓名', '入职日期_发送版本', '合同主体', '计划转正日期_发送版本', '工号'],
+    #                        index=False)
+    # docx_template_path = 'source_data/发送模版.docx'
+    # pics_output_path = result_path + '/pics'
+    # if not os.path.exists(pics_output_path):
+    #     os.mkdir(pics_output_path)
+    # email_merge(docx_template_path, basic_info_output_path, pics_output_path, sent_date)
+    # docx_to_pdf(pics_output_path)
+    # pdf_to_jpeg(pics_output_path)
+    # folder_path = pics_output_path  # 要处理的文件夹
+    # keys = ['pdf', 'docx']  # 要删除的关键字列表
+    # count = deletefiles(folder_path, keys)
+    # print('共删除{}项'.format(count))
     emails = get_email_address(basic_info)
     emails['抄送'] = emails['抄送'].apply(drop_duplicates)
-    print(emails)
     email_output_path = result_path + '/底表_' + today_date_format + '.xlsx'
     emails.to_excel(email_output_path,
                     columns=['工号', '姓名', '员工邮箱', '抄送'],
@@ -298,3 +303,6 @@ if __name__ == '__main__':
     df_result["实际转正日期"] = pd.to_datetime(df_result["实际转正日期"])
     df_result["发送日期"] = pd.to_datetime(df_result["发送日期"])
     insert_into_excel(df_result, 'result/发送记录.xlsx')
+    df_sent_info = df_result[['工号', '姓名', '员工邮箱', '抄送']]
+    df_sent_info['图片'] = df_sent_info['工号'].astype(str) + '-' + df_sent_info['姓名'] + '.png'
+    df_sent_info.to_excel('result/' + today_date_format + '/发送信息.xlsx', columns=['工号', '姓名', '图片', '员工邮箱', '抄送'], index=False)
